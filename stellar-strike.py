@@ -49,6 +49,9 @@ last_boss_score = 0
 buildings = []  # Each building is a dictionary with x, y, z, width, height, color
 building_speed = 0.1  # Speed at which buildings move toward the player
 
+# Collision distance threshold
+MIN_COLLISION_DISTANCE = 3.0  # Enemies must be within this Z distance to be hit
+
 # Generate initial city buildings
 def generate_city_background():
     global buildings
@@ -195,28 +198,30 @@ def update_projectiles():
     # Check for collisions between projectiles and obstacles
     for projectile in projectiles[:]:
         for obstacle in obstacles[:]:
-            distance = ((projectile[0] - obstacle['x']) ** 2 + (projectile[1] - obstacle['y']) ** 2) ** 0.5
-            if distance < 10 + obstacle['size'] / obstacle['z']:
-                if obstacle['is_boss']:
-                    obstacle['health'] -= 1
-                    if obstacle['health'] <= 0:
+            # Only check for collisions if the obstacle is within the minimum distance
+            if obstacle['z'] <= MIN_COLLISION_DISTANCE:
+                distance = ((projectile[0] - obstacle['x']) ** 2 + (projectile[1] - obstacle['y']) ** 2) ** 0.5
+                if distance < 10 + obstacle['size'] / obstacle['z']:
+                    if obstacle['is_boss']:
+                        obstacle['health'] -= 1
+                        if obstacle['health'] <= 0:
+                            obstacles.remove(obstacle)
+                            # Create big explosion
+                            for _ in range(50):
+                                vx = random.uniform(-2, 2)
+                                vy = random.uniform(-2, 2)
+                                explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 10, YELLOW, 20, vx, vy])
+                            score += 100  # Increase score for defeating boss
+                    else:
                         obstacles.remove(obstacle)
-                        # Create big explosion
-                        for _ in range(50):
-                            vx = random.uniform(-2, 2)
-                            vy = random.uniform(-2, 2)
-                            explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 10, YELLOW, 20, vx, vy])
-                        score += 100  # Increase score for defeating boss
-                else:
-                    obstacles.remove(obstacle)
-                    # Create regular explosion
-                    for _ in range(10):
-                        vx = random.uniform(-1, 1)
-                        vy = random.uniform(-1, 1)
-                        explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 5, ORANGE, 10, vx, vy])
-                    score += 10
-                projectiles.remove(projectile)
-                break
+                        # Create regular explosion
+                        for _ in range(10):
+                            vx = random.uniform(-1, 1)
+                            vy = random.uniform(-1, 1)
+                            explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 5, ORANGE, 10, vx, vy])
+                        score += 10
+                    projectiles.remove(projectile)
+                    break
 
 def update_power_ups():
     global power_ups, special_weapon_active, special_weapon_timer  # Declare global variables
