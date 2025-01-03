@@ -1,6 +1,6 @@
 # Stellar Strike
 
-A space shooter adventure game for the Raspberry Pi Pico featuring a 3D starfield, obstacles, projectiles, and power-ups. Navigate through space, avoid incoming obstacles, and shoot your way through the galaxy!
+A space shooter adventure game for the Raspberry Pi Pico featuring a 3D starfield, obstacles, projectiles, and power-ups. Navigate through space, avoid incoming obstacles, and shoot your way through the galaxy! Making use of the Pimoroni Pico Display Pack.
 
 ## Features
 
