@@ -240,17 +240,17 @@ def game_loop():
         draw_starfield()
         
         if not game_over:
-            # Move ship left and right
-            if button_a.is_pressed and ship_x > 20:
-                ship_x -= ship_speed
-            if button_b.is_pressed and ship_x < WIDTH - 20:
-                ship_x += ship_speed
-            
-            # Move ship up and down with X and Y buttons
-            if button_x.is_pressed and ship_y > 20:  # Move up
+            # Move ship up and down with A and X buttons
+            if button_a.is_pressed and ship_y > 20:  # Move up
                 ship_y -= ship_speed
-            if button_y.is_pressed and ship_y < HEIGHT - 20:  # Move down
+            if button_x.is_pressed and ship_y < HEIGHT - 20:  # Move down
                 ship_y += ship_speed
+            
+            # Move ship left and right with B and Y buttons
+            if button_b.is_pressed and ship_x > 20:  # Move left
+                ship_x -= ship_speed
+            if button_y.is_pressed and ship_x < WIDTH - 20:  # Move right
+                ship_x += ship_speed
             
             # Automatically shoot if in front of an enemy
             auto_shoot()
