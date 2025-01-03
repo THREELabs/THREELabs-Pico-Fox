@@ -25,6 +25,8 @@ ORANGE = display.create_pen(255, 165, 0)
 PURPLE = display.create_pen(128, 0, 128)
 CYAN = display.create_pen(0, 255, 255)
 MAGENTA = display.create_pen(255, 0, 255)
+DARK_GRAY = display.create_pen(50, 50, 50)
+LIGHT_GRAY = display.create_pen(200, 200, 200)
 
 # Game variables
 ship_x = WIDTH // 2
@@ -43,8 +45,22 @@ score = 0
 game_over = False
 last_boss_score = 0
 
-# Starfield variables
-stars = [[random.randint(0, WIDTH), random.randint(0, HEIGHT), random.uniform(0.1, 1.0)] for _ in range(50)]
+# City background variables
+buildings = []  # Each building is a dictionary with x, y, z, width, height, color
+building_speed = 0.1  # Speed at which buildings move toward the player
+
+# Generate initial city buildings
+def generate_city_background():
+    global buildings
+    buildings = []
+    x = 0
+    while x < WIDTH:
+        width = random.randint(20, 60)
+        height = random.randint(50, HEIGHT // 2)
+        z = random.uniform(10.0, 20.0)  # Start buildings farther away
+        color = random.choice([DARK_GRAY, LIGHT_GRAY])
+        buildings.append({"x": x, "y": HEIGHT, "z": z, "width": width, "height": height, "color": color})
+        x += width + random.randint(10, 30)
 
 def reset_game():
     global ship_x, ship_y, obstacles, projectiles, power_ups, explosions, special_weapon_active, special_weapon_timer, score, game_over, last_boss_score
@@ -59,6 +75,7 @@ def reset_game():
     score = 0
     game_over = False
     last_boss_score = 0
+    generate_city_background()
 
 def project_3d_to_2d(x, y, z):
     """Convert 3D coordinates to 2D screen coordinates using perspective projection."""
@@ -67,16 +84,34 @@ def project_3d_to_2d(x, y, z):
     screen_y = int(y * scale + HEIGHT // 2)
     return screen_x, screen_y
 
-def draw_starfield():
-    for star in stars:
-        display.set_pen(WHITE)
-        screen_x, screen_y = project_3d_to_2d(star[0] - WIDTH // 2, star[1] - HEIGHT // 2, star[2])
-        display.circle(screen_x, screen_y, 1)
-        star[2] -= 0.01  # Move star toward the player
-        if star[2] <= 0.1:  # Reset star when it gets too close
-            star[0] = random.randint(0, WIDTH)
-            star[1] = random.randint(0, HEIGHT)
-            star[2] = random.uniform(0.1, 1.0)
+def draw_city_background():
+    """Draw the city background with moving buildings."""
+    global buildings
+    display.set_pen(BLACK)
+    display.clear()
+    for building in buildings[:]:
+        # Update building position (move closer to the player)
+        building["z"] -= building_speed
+        # Remove buildings that have passed the player
+        if building["z"] <= 0.1:
+            buildings.remove(building)
+            continue
+        # Project building coordinates to 2D
+        screen_x, screen_y = project_3d_to_2d(building["x"] - WIDTH // 2, building["y"] - HEIGHT // 2, building["z"])
+        # Scale building size based on depth
+        width = int(building["width"] / building["z"])
+        height = int(building["height"] / building["z"])
+        # Draw the building
+        display.set_pen(building["color"])
+        display.rectangle(screen_x, screen_y, width, height)
+    # Spawn new buildings at the far end
+    if random.randint(0, 10) == 0:
+        x = random.randint(0, WIDTH)
+        z = random.uniform(10.0, 20.0)
+        width = random.randint(20, 60)
+        height = random.randint(50, HEIGHT // 2)
+        color = random.choice([DARK_GRAY, LIGHT_GRAY])
+        buildings.append({"x": x, "y": HEIGHT, "z": z, "width": width, "height": height, "color": color})
 
 def draw_ship():
     display.set_pen(YELLOW)
@@ -233,11 +268,8 @@ def auto_shoot():
 def game_loop():
     global ship_x, ship_y, special_weapon_active, special_weapon_timer, game_over  # Declare global variables
     while True:
-        display.set_pen(BLACK)
-        display.clear()
-        
-        # Draw starfield background
-        draw_starfield()
+        # Draw city background
+        draw_city_background()
         
         if not game_over:
             # Move ship up and down with A and X buttons
