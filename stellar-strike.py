@@ -96,7 +96,8 @@ def draw_city_background():
         # Update building position (move closer to the player)
         building["z"] -= building_speed
         # Remove buildings that have passed the player
-        if building["z"] <= 0.1:
+        # Remove buildings that have passed the player or are at the same depth
+        if building["z"] <= 1.0:
             buildings.remove(building)
             continue
         # Project building coordinates to 2D
