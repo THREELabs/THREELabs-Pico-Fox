@@ -34,7 +34,9 @@ HORIZON_BLUE = (0, 191, 255)  # Darker blue for the horizon (RGB tuple)
 # Game variables
 ship_x = WIDTH // 2
 ship_y = HEIGHT // 2
-ship_speed = 3
+ship_speed = 5  # Increased speed for better maneuverability
+ship_rotation = 0  # Track ship rotation angle
+smoke_particles = []  # List to store smoke trail particles
 obstacles = []  # Each obstacle is a dictionary with x, y, z, size, health, is_boss
 obstacle_speed = 0.1  # Increased speed for faster game pace
 spawn_rate = 15  # Decreased rate for even more frequent spawning
@@ -195,9 +197,72 @@ def draw_city_background():
             "color": color
         })
 
+def update_smoke_particles():
+    """Update and remove old smoke particles"""
+    global smoke_particles
+    for particle in smoke_particles[:]:
+        particle[3] -= 1  # Decrease lifetime
+        particle[0] += particle[4]  # Move x based on velocity
+        particle[1] += particle[5]  # Move y based on velocity
+        if particle[3] <= 0:
+            smoke_particles.remove(particle)
+
+def create_smoke_particle(x, y, side):
+    """Create a new smoke particle"""
+    vx = random.uniform(-1, 1)
+    vy = random.uniform(-0.5, 0.5)
+    if side == 'left':
+        vx += 1  # Drift right when tilting left
+    else:
+        vx -= 1  # Drift left when tilting right
+    size = random.randint(2, 4)
+    lifetime = random.randint(10, 20)
+    smoke_particles.append([x, y, size, lifetime, vx, vy])
+
 def draw_ship():
-    display.set_pen(YELLOW)
-    display.triangle(ship_x - 10, ship_y, ship_x + 10, ship_y, ship_x, ship_y - 20)  # Spaceship
+    global ship_rotation
+    
+    # Update rotation based on movement
+    if button_b.is_pressed:  # Left tilt
+        ship_rotation = 30
+        create_smoke_particle(ship_x - 20, ship_y + 10, 'left')
+    elif button_y.is_pressed:  # Right tilt
+        ship_rotation = -30
+        create_smoke_particle(ship_x + 20, ship_y + 10, 'right')
+    else:  # Return to center
+        ship_rotation = 0
+    
+    # Draw smoke particles
+    display.set_pen(LIGHT_GRAY)
+    for particle in smoke_particles:
+        display.circle(int(particle[0]), int(particle[1]), particle[2])
+    
+    # Draw jet engine effects
+    display.set_pen(ORANGE)
+    for _ in range(3):
+        flame_x = ship_x + random.randint(-3, 3)
+        flame_y = ship_y + 15 + random.randint(0, 5)
+        flame_size = random.randint(2, 4)
+        display.circle(flame_x, flame_y, flame_size)
+    
+    display.set_pen(WHITE)
+    
+    # Draw jet body
+    if ship_rotation == 0:  # No tilt
+        display.triangle(ship_x - 15, ship_y + 10, ship_x + 15, ship_y + 10, ship_x, ship_y - 15)  # Main body
+        # Wings
+        display.triangle(ship_x - 25, ship_y + 5, ship_x - 5, ship_y + 5, ship_x - 15, ship_y - 5)  # Left wing
+        display.triangle(ship_x + 5, ship_y + 5, ship_x + 25, ship_y + 5, ship_x + 15, ship_y - 5)  # Right wing
+    elif ship_rotation > 0:  # Left tilt
+        display.triangle(ship_x - 10, ship_y + 15, ship_x + 20, ship_y + 5, ship_x + 5, ship_y - 15)  # Main body
+        # Wings
+        display.triangle(ship_x - 20, ship_y + 10, ship_x, ship_y + 10, ship_x - 5, ship_y)  # Left wing
+        display.triangle(ship_x + 10, ship_y, ship_x + 30, ship_y, ship_x + 20, ship_y - 10)  # Right wing
+    else:  # Right tilt
+        display.triangle(ship_x - 20, ship_y + 5, ship_x + 10, ship_y + 15, ship_x - 5, ship_y - 15)  # Main body
+        # Wings
+        display.triangle(ship_x - 30, ship_y, ship_x - 10, ship_y, ship_x - 20, ship_y - 10)  # Left wing
+        display.triangle(ship_x, ship_y + 10, ship_x + 20, ship_y + 10, ship_x + 5, ship_y)  # Right wing
 
 def draw_obstacles():
     for obstacle in obstacles:
@@ -350,11 +415,36 @@ def update_power_ups():
 def check_collision():
     global game_over  # Declare global variable
     if not game_over:
+        # Check collision with obstacles
         for obstacle in obstacles:
             if obstacle['z'] <= 1.0:
                 distance = ((ship_x - obstacle['x']) ** 2 + (ship_y - obstacle['y']) ** 2) ** 0.5
                 if distance < 10 + obstacle['size'] / obstacle['z'] * focal_length:
+                    create_explosion(ship_x, ship_y, 1.0)
                     game_over = True
+        
+        # Check collision with buildings
+        for building in buildings:
+            if 7.0 < building['z'] < 9.0:  # Only check buildings in front of player
+                # Project building coordinates
+                screen_x_base, screen_y_base = project_3d_to_2d(building['x'] - WIDTH // 2, building['y'], building['z'])
+                width = int(building['width'] / building['z'] * focal_length)
+                
+                # Check if ship is within building bounds
+                if screen_x_base - width//2 < ship_x < screen_x_base + width//2:
+                    create_explosion(ship_x, ship_y, 1.0)
+                    game_over = True
+
+def create_explosion(x, y, z):
+    """Create a large explosion effect at the given coordinates."""
+    # Create many explosion particles
+    for _ in range(50):
+        vx = random.uniform(-4, 4)
+        vy = random.uniform(-4, 4)
+        color = random.choice([RED, ORANGE, YELLOW])
+        size = random.randint(5, 15)
+        lifetime = random.randint(20, 40)
+        explosions.append([x, y, z, size, color, lifetime, vx, vy])
 
 def draw_score():
     display.set_pen(WHITE)
@@ -386,6 +476,7 @@ def auto_shoot():
 
 def game_loop():
     global ship_x, ship_y, special_weapon_active, special_weapon_timer, game_over  # Declare global variables
+    
     while True:
         # Draw sky and horizon
         draw_sky_and_horizon()
@@ -424,6 +515,7 @@ def game_loop():
             check_collision()
             
             # Draw elements
+            update_smoke_particles()
             draw_ship()
             draw_projectiles()
             draw_power_ups()
