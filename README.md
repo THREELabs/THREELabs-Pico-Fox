@@ -1,6 +1,6 @@
-# Stellar Strike
+# Pico Fox
 
-A space shooter adventure game for the Raspberry Pi Pico featuring a 3D starfield, obstacles, projectiles, and power-ups. Navigate through space, avoid incoming obstacles, and shoot your way through the galaxy! Making use of the Pimoroni Pico Display Pack.
+Pico Fox: A compact, fan-made homage to the classic SNES game StarFox, built for the Raspberry Pi Pico using the Pimoroni Pico Display Pack. This project brings retro space shooter action to the micro-controller, featuring simplified graphics and gameplay optimized for the Pico's hardware.
 
 ## Features
 
