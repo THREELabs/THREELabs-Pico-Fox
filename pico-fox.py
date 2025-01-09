@@ -1,6 +1,7 @@
 from machine import Pin, Timer
 import utime
 import random
+import math
 from pimoroni import Button
 from picographics import PicoGraphics, DISPLAY_PICO_DISPLAY
 
@@ -17,7 +18,7 @@ button_y = Button(15)  # Y button
 # Colors
 BLACK = display.create_pen(0, 0, 0)
 WHITE = display.create_pen(255, 255, 255)
-BLUE = display.create_pen(0, 0, 255)
+BLUE = display.create_pen(100, 100, 255)  # Lighter blue
 RED = display.create_pen(255, 0, 0)
 YELLOW = display.create_pen(255, 255, 0)
 GREEN = display.create_pen(0, 255, 0)  # Green for the ground
@@ -27,39 +28,30 @@ CYAN = display.create_pen(0, 255, 255)
 MAGENTA = display.create_pen(255, 0, 255)
 BROWN = display.create_pen(139, 69, 19)
 DARK_GRAY = display.create_pen(50, 50, 50)
-LIGHT_GRAY = display.create_pen(200, 200, 200)
+LIGHT_GRAY = display.create_pen(150, 150, 150)
+TAN = display.create_pen(210, 180, 140)  # Tan color
+DOOR_COLOR = display.create_pen(139, 69, 19)  # Brown color for doors
+SIDE_GRAY = display.create_pen(100, 100, 100)  # Gray for the sides of the buildings
 SKY_BLUE = (135, 206, 235)  # Light blue for the sky (RGB tuple)
 HORIZON_BLUE = (0, 191, 255)  # Darker blue for the horizon (RGB tuple)
 
 # Game variables
 ship_x = WIDTH // 2
 ship_y = HEIGHT // 2
-ship_speed = 5  # Increased speed for better maneuverability
+ship_speed = 8  # Increased speed for better maneuverability
 ship_rotation = 0  # Track ship rotation angle
 smoke_particles = []  # List to store smoke trail particles
-obstacles = []  # Each obstacle is a dictionary with x, y, z, size, health, is_boss
-obstacle_speed = 0.1  # Increased speed for faster game pace
-spawn_rate = 15  # Decreased rate for even more frequent spawning
-projectiles = []  # Each projectile is a list [x, y, z, color]
-power_ups = []  # Each power-up is a list [x, y, z]
-explosions = []  # Each explosion is a list [x, y, z, size, color, lifetime, vx, vy]
-special_weapon_active = False
-special_weapon_duration = 500  # Duration of special weapon in frames
-special_weapon_timer = 0
-score = 0
+explosions = []  # List to store explosion particles
 game_over = False
-last_boss_score = 0
 
 # City background variables
 buildings = []  # Each building is a dictionary with x, y, z, width, height, color
 building_speed = 0.1  # Speed at which buildings move toward the player
 
-# Collision distance threshold
-MIN_COLLISION_DISTANCE = 3.0  # Enemies must be within this Z distance to be hit
-
 # Ground variables
 GROUND_Y = 0  # Ground level in 3D space
 GROUND_HEIGHT = 20  # Height of the ground (grass) at the bottom of the screen
+fixed_width = 40
 
 # Focal length for perspective projection
 focal_length = 10
@@ -70,10 +62,10 @@ def generate_city_background():
     buildings = []
     x = 0
     while x < WIDTH:
-        width = random.randint(20, 60)
+        width = fixed_width
         height = random.randint(50, 150)  # Allow buildings to be taller
         z = random.uniform(10.0, 20.0)  # Start buildings farther away
-        color = random.choice([DARK_GRAY, LIGHT_GRAY])
+        color = random.choice([LIGHT_GRAY, TAN])
         buildings.append({
             "x": x, 
             "y": GROUND_Y,  # Set y to ground level in 3D space
@@ -85,18 +77,10 @@ def generate_city_background():
         x += width + random.randint(10, 30)
 
 def reset_game():
-    global ship_x, ship_y, obstacles, projectiles, power_ups, explosions, special_weapon_active, special_weapon_timer, score, game_over, last_boss_score
+    global ship_x, ship_y, game_over
     ship_x = WIDTH // 2
     ship_y = HEIGHT // 2
-    obstacles = []
-    projectiles = []
-    power_ups = []
-    explosions = []
-    special_weapon_active = False
-    special_weapon_timer = 0
-    score = 0
     game_over = False
-    last_boss_score = 0
     generate_city_background()
 
 def project_3d_to_2d(x, y, z):
@@ -120,9 +104,25 @@ def draw_sky_and_horizon():
         display.line(0, y, WIDTH, y)
 
 def draw_ground():
-    """Draw the ground (grass) at the bottom of the screen."""
+    """Draw the ground (grass) at the bottom of the screen with fine animated speckles."""
+    # Base grass color
     display.set_pen(GREEN)
     display.rectangle(0, HEIGHT - GROUND_HEIGHT, WIDTH, GROUND_HEIGHT)
+    
+    # Create more contrasting darker and lighter green colors for speckles
+    dark_green = display.create_pen(0, 180, 0)  # Darker green for better visibility
+    light_green = display.create_pen(20, 220, 20)  # Less bright light green
+    
+    # Add more numerous, finer speckles for subtle movement effect
+    for _ in range(100):  # Increased number of speckles
+        x = random.randint(0, WIDTH)
+        y = random.randint(HEIGHT - GROUND_HEIGHT, HEIGHT)
+        # Always use size 1 for finer detail
+        display.set_pen(dark_green if random.random() < 0.5 else light_green)
+        display.circle(x, y, 1)
+
+def draw_city_background():
+    """Draw the city background with moving buildings."""
 
 def draw_city_background():
     """Draw the city background with moving buildings."""
@@ -164,29 +164,21 @@ def draw_city_background():
             ground_overlap = 10
             screen_y += ground_overlap
             
-            # Draw a white border around the building
-            border_size = 2
-            display.set_pen(WHITE)
-            display.rectangle(screen_x - border_size, screen_y - border_size - ground_overlap, screen_width + 2 * border_size, screen_height + 2 * border_size)
-            
-            # Draw the building
+            # Draw the front of the building
             display.set_pen(building["color"])
             display.rectangle(screen_x, screen_y - ground_overlap, screen_width, screen_height)
             
-            # Draw a doorway on the building (fixed position from bottom)
-            door_width = 10
-            door_height = 20
-            door_x = screen_x + screen_width // 2 - door_width // 2
-            door_y = screen_y + screen_height - door_height - screen_height // 3  # Position door 1/3 from bottom
-            display.set_pen(BROWN)
-            display.rectangle(door_x, door_y, door_width, door_height)
+            # Draw the side of the building
+            display.set_pen(SIDE_GRAY)
+            side_width = screen_width // 4  # Adjust the width of the side
+            display.rectangle(screen_x + screen_width, screen_y - ground_overlap + side_width, side_width, screen_height - side_width)
     
     # Only spawn new buildings if there are fewer than 2
     if len(buildings) < 2 and random.randint(0, 10) == 0:
         x = random.randint(0, WIDTH)
         z = random.uniform(15.0, 20.0)  # Start buildings further away
-        width = random.randint(20, 60)
-        height = random.randint(50, 150)
+        width = random.randint(30, 80)  # Increased variation in building width
+        height = random.randint(60, 200)  # Increased variation in building height
         color = random.choice([DARK_GRAY, LIGHT_GRAY])
         buildings.append({
             "x": x,
@@ -232,20 +224,20 @@ def draw_ship():
     else:  # Return to center
         ship_rotation = 0
     
-    # Draw smoke particles
-    display.set_pen(LIGHT_GRAY)
-    for particle in smoke_particles:
-        display.circle(int(particle[0]), int(particle[1]), particle[2])
+        # Draw smoke particles
+        display.set_pen(WHITE)
+        for particle in smoke_particles:
+            display.circle(int(particle[0]), int(particle[1]), particle[2])
     
     # Draw jet engine effects
     display.set_pen(ORANGE)
     for _ in range(3):
         flame_x = ship_x + random.randint(-3, 3)
-        flame_y = ship_y + 15 + random.randint(0, 5)
+        flame_y = ship_y + 12 + random.randint(0, 5)  # Moved flames closer to jet
         flame_size = random.randint(2, 4)
         display.circle(flame_x, flame_y, flame_size)
     
-    display.set_pen(WHITE)
+    display.set_pen(BLUE)
     
     # Draw jet body
     if ship_rotation == 0:  # No tilt
@@ -309,18 +301,6 @@ def draw_power_ups():
         screen_x, screen_y = project_3d_to_2d(power_up[0] - WIDTH // 2, power_up[1], power_up[2])
         size = int(5 / power_up[2] * focal_length)
         display.circle(screen_x, screen_y, size)
-
-def draw_explosions():
-    for explosion in explosions[:]:
-        display.set_pen(explosion[4])
-        screen_x, screen_y = project_3d_to_2d(explosion[0] - WIDTH // 2, explosion[1], explosion[2])
-        size = int(explosion[3] / explosion[2] * focal_length)
-        display.circle(screen_x, screen_y, size)
-        explosion[0] += explosion[6]  # Update x position based on velocity
-        explosion[1] += explosion[7]  # Update y position based on velocity
-        explosion[5] -= 1  # Decrease lifetime
-        if explosion[5] <= 0:
-            explosions.remove(explosion)
 
 def update_obstacles():
     global obstacles, score, last_boss_score  # Declare global variables
@@ -413,16 +393,8 @@ def update_power_ups():
         power_ups.append([x, y, z])
 
 def check_collision():
-    global game_over  # Declare global variable
+    global game_over
     if not game_over:
-        # Check collision with obstacles
-        for obstacle in obstacles:
-            if obstacle['z'] <= 1.0:
-                distance = ((ship_x - obstacle['x']) ** 2 + (ship_y - obstacle['y']) ** 2) ** 0.5
-                if distance < 10 + obstacle['size'] / obstacle['z'] * focal_length:
-                    create_explosion(ship_x, ship_y, 1.0)
-                    game_over = True
-        
         # Check collision with buildings
         for building in buildings:
             if 7.0 < building['z'] < 9.0:  # Only check buildings in front of player
@@ -432,50 +404,15 @@ def check_collision():
                 
                 # Check if ship is within building bounds
                 if screen_x_base - width//2 < ship_x < screen_x_base + width//2:
-                    create_explosion(ship_x, ship_y, 1.0)
                     game_over = True
-
-def create_explosion(x, y, z):
-    """Create a large explosion effect at the given coordinates."""
-    # Create many explosion particles
-    for _ in range(50):
-        vx = random.uniform(-4, 4)
-        vy = random.uniform(-4, 4)
-        color = random.choice([RED, ORANGE, YELLOW])
-        size = random.randint(5, 15)
-        lifetime = random.randint(20, 40)
-        explosions.append([x, y, z, size, color, lifetime, vx, vy])
-
-def draw_score():
-    display.set_pen(WHITE)
-    display.text(f"Score: {score}", 10, 10, scale=2)
 
 def draw_game_over():
     display.set_pen(WHITE)
     display.text("Game Over!", WIDTH // 2 - 50, HEIGHT // 2 - 10, scale=2)
     display.text("Press A to restart", WIDTH // 2 - 70, HEIGHT // 2 + 20, scale=1)
 
-# Shooting cooldown variables
-last_shot_time = 0
-SHOT_COOLDOWN = 1.0  # Time in seconds between shots
-
-def auto_shoot():
-    """Automatically shoot projectiles if near an enemy."""
-    global projectiles, last_shot_time
-    current_time = utime.time()
-    
-    # Check if enough time has passed since last shot
-    if current_time - last_shot_time >= SHOT_COOLDOWN:
-        for obstacle in obstacles:
-            # Check if the player is near the enemy (within a certain range and Z distance)
-            if abs(ship_x - obstacle['x']) < 30 and obstacle['z'] < 6:
-                # Single projectile instead of spread
-                projectiles.append([ship_x, ship_y, 1.0, WHITE])
-                last_shot_time = current_time
-                break  # Only shoot at one enemy at a time
-
 def game_loop():
-    global ship_x, ship_y, special_weapon_active, special_weapon_timer, game_over  # Declare global variables
+    global ship_x, ship_y, game_over
     
     while True:
         # Draw sky and horizon
@@ -483,12 +420,6 @@ def game_loop():
         
         # Draw ground
         draw_ground()
-        
-        # Draw obstacles (flying monsters) before buildings so they're visible
-        draw_obstacles()
-        
-        # Draw city background
-        draw_city_background()
         
         if not game_over:
             # Move ship up and down with A and X buttons
@@ -503,31 +434,19 @@ def game_loop():
             if button_y.is_pressed and ship_x < WIDTH - 20:  # Move right
                 ship_x += ship_speed
             
-            # Automatically shoot if in front of an enemy
-            auto_shoot()
-            
-            # Update game elements
-            update_obstacles()
-            update_projectiles()
-            update_power_ups()
-            
             # Check collision
             check_collision()
             
-            # Draw elements
+            # Update elements
             update_smoke_particles()
-            draw_ship()
-            draw_projectiles()
-            draw_power_ups()
-            draw_explosions()
-            draw_score()
             
-            # Update special weapon timer
-            if special_weapon_active:
-                special_weapon_timer -= 1
-                if special_weapon_timer <= 0:
-                    special_weapon_active = False
-        else:
+            # Draw elements
+            draw_ship()
+        
+        # Draw city background
+        draw_city_background()
+        
+        if game_over:
             draw_game_over()
             if button_a.is_pressed:
                 reset_game()
