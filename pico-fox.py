@@ -145,7 +145,7 @@ def draw_city_background():
             screen_x_top, screen_y_top = project_3d_to_2d(building["x"] - WIDTH // 2, building["y"] + building["height"], building["z"])
             
             # Scale width based on depth
-            width = int(building["width"] / building["z"] * focal_length)
+            # Scale width based on depth
             
             # Calculate height based on the difference in y coordinates
             height = screen_y_base - screen_y_top
@@ -155,9 +155,9 @@ def draw_city_background():
                 height = 0
                 
             # Clamp screen coordinates to screen boundaries
-            screen_x = max(0, min(WIDTH, screen_x_base - width // 2))
+            screen_x = max(0, min(WIDTH, screen_x_base - building["width"] // 2))
             screen_y = max(0, min(HEIGHT, screen_y_top))
-            screen_width = max(0, min(WIDTH - screen_x, width))
+            screen_width = max(0, min(WIDTH - screen_x, building["width"]))
             screen_height = max(0, min(HEIGHT - screen_y, height))
             
             # Adjust screen_y to be slightly into the ground
@@ -196,7 +196,8 @@ def update_smoke_particles():
         particle[3] -= 1  # Decrease lifetime
         particle[0] += particle[4]  # Move x based on velocity
         particle[1] += particle[5]  # Move y based on velocity
-        if particle[3] <= 0:
+        particle[6] = max(0, particle[6] - 2) # Decrease alpha (fade out)
+        if particle[3] <= 0 or particle[6] <= 0:
             smoke_particles.remove(particle)
 
 def create_smoke_particle(x, y, side):
@@ -209,7 +210,8 @@ def create_smoke_particle(x, y, side):
         vx -= 1  # Drift left when tilting right
     size = random.randint(2, 4)
     lifetime = random.randint(10, 20)
-    smoke_particles.append([x, y, size, lifetime, vx, vy])
+    alpha = 255 # Initial alpha value
+    smoke_particles.append([x, y, size, lifetime, vx, vy, alpha])
 
 def draw_ship():
     global ship_rotation
@@ -219,15 +221,17 @@ def draw_ship():
         ship_rotation = 30
         create_smoke_particle(ship_x - 20, ship_y + 10, 'left')
     elif button_y.is_pressed:  # Right tilt
-        ship_rotation = -30
-        create_smoke_particle(ship_x + 20, ship_y + 10, 'right')
+        ship_rotation = -30    
     else:  # Return to center
         ship_rotation = 0
+        
+    # Create smoke particles continuously
+    create_smoke_particle(ship_x, ship_y + 10, 'center')
     
-        # Draw smoke particles
-        display.set_pen(WHITE)
-        for particle in smoke_particles:
-            display.circle(int(particle[0]), int(particle[1]), particle[2])
+    # Draw smoke particles with varying alpha
+    for particle in smoke_particles:
+        display.set_pen(display.create_pen(particle[6], particle[6], particle[6]))
+        display.circle(int(particle[0]), int(particle[1]), particle[2])
     
     # Draw jet engine effects
     display.set_pen(ORANGE)
@@ -236,6 +240,12 @@ def draw_ship():
         flame_y = ship_y + 12 + random.randint(0, 5)  # Moved flames closer to jet
         flame_size = random.randint(2, 4)
         display.circle(flame_x, flame_y, flame_size)
+    
+    # Create smoke particles when tilting
+    if button_b.is_pressed:  # Left tilt
+        create_smoke_particle(ship_x - 20, ship_y + 10, 'left')
+    elif button_y.is_pressed:  # Right tilt
+        create_smoke_particle(ship_x + 20, ship_y + 10, 'right')
     
     display.set_pen(BLUE)
     
@@ -439,12 +449,12 @@ def game_loop():
             
             # Update elements
             update_smoke_particles()
-            
-            # Draw elements
-            draw_ship()
         
         # Draw city background
         draw_city_background()
+        
+        # Draw elements
+        draw_ship()
         
         if game_over:
             draw_game_over()
