@@ -41,8 +41,8 @@ ship_y = HEIGHT // 2
 ship_speed = 12  # Increased forward speed
 up_down_speed = 6  # Slower up/down speed
 left_right_speed = 6  # Slower left/right speed
-speed_increment = 0.1  # Amount to increase speed each frame
-max_speed = 20  # Maximum speed
+speed_increment = 0.2  # Amount to increase speed each frame
+max_speed = 30  # Maximum speed
 ship_rotation = 0  # Track ship rotation angle
 smoke_particles = []  # List to store smoke trail particles
 explosions = []  # List to store explosion particles
@@ -410,7 +410,15 @@ def update_explosions():
         # Cull particles that are off-screen
         if x < 0 or x > WIDTH or y < 0 or y > HEIGHT:
             continue
-            
+        
+        # Reduce alpha value (fading effect)
+        alpha = color.r
+        if alpha > 10:
+            alpha -= 10
+            color = display.create_pen(alpha, color.g, color.b)
+        else:
+            color = display.create_pen(0, color.g, color.b)
+        
         # Update particle position and properties
         x += int(vx)
         y += int(vy)
@@ -461,23 +469,21 @@ def check_collision():
                         screen_y_top < ship_y < screen_y_base):
                     game_over = True
                     # Create optimized ship explosion
-                    for _ in range(100):  # Reduced particle count
-                        vx = random.uniform(-5, 5)  # Slower spread
-                        vy = random.uniform(-5, 5)
-                        size = random.randint(4, 8)  # Smaller particles
-                        lifetime = random.randint(30, 60)  # Shorter duration
-                        # Use pre-defined color
-                        color = display.create_pen(255, 140, 0)  # Orange
+                    for _ in range(200):  # Increased particle count
+                        vx = random.uniform(-6, 6)  # Faster spread
+                        vy = random.uniform(-6, 6)
+                        size = random.randint(2, 6)  # Vary particle size
+                        lifetime = random.randint(20, 50)  # Shorter duration
+                        color = random.choice([display.create_pen(255, 140, 0), display.create_pen(255, 255, 0)])  # Vary color
                         ship_explosion_particles.append([ship_x, ship_y, 1.0, size, color, lifetime, vx, vy])
 
                     # Create optimized building explosion
-                    for _ in range(100):  # Reduced particle count
-                        vx = random.uniform(-4, 4)
-                        vy = random.uniform(-4, 4)
-                        size = random.randint(8, 12)  # Smaller particles
-                        lifetime = random.randint(30, 60)
-                        # Use single color
-                        color = display.create_pen(255, 69, 0)  # Red-Orange
+                    for _ in range(200):  # Increased particle count
+                        vx = random.uniform(-5, 5)
+                        vy = random.uniform(-5, 5)
+                        size = random.randint(4, 10)  # Vary particle size
+                        lifetime = random.randint(20, 50)
+                        color = random.choice([display.create_pen(255, 69, 0), display.create_pen(255, 165, 0)])  # Vary color
                         explosions.append([building["x"], building["y"], building["z"], size, color, lifetime, vx, vy])
 
 def update_ship_explosion_particles():
@@ -490,6 +496,14 @@ def update_ship_explosion_particles():
         # Cull particles that are off-screen
         if x < 0 or x > WIDTH or y < 0 or y > HEIGHT:
             continue
+        
+        # Reduce alpha value (fading effect)
+        alpha = color.r
+        if alpha > 10:
+            alpha -= 10
+            color = display.create_pen(alpha, color.g, color.b)
+        else:
+            color = display.create_pen(0, color.g, color.b)
             
         # Update particle position and properties
         x += vx
