@@ -396,9 +396,9 @@ def draw_explosions():
         x, y, z, size, color, lifetime, vx, vy = particle
         # Project 3D coordinates to 2D screen coordinates
         screen_x, screen_y = project_3d_to_2d(x - WIDTH // 2, y, z)
-        # Draw the particle as a small pixel
+        # Draw the particle as a circle with varying size
         display.set_pen(color)
-        display.pixel(int(screen_x), int(screen_y))
+        display.circle(int(screen_x), int(screen_y), int(size))
 
 def update_explosions():
     """Update explosion particles."""
@@ -457,22 +457,35 @@ def check_collision():
                 if (screen_x_base - width // 2 < ship_x < screen_x_base + width // 2 and
                         screen_y_top < ship_y < screen_y_base):
                     game_over = True
-                    # Create explosion particles for the ship
-                    for _ in range(50):
-                        vx = random.uniform(-3, 3)  # Increased velocity range for more spread
-                        vy = random.uniform(-3, 3)
-                        size = random.randint(1, 2)  # Smaller particle size
-                        lifetime = random.randint(30, 60)  # Longer lifetime
-                        color = display.create_pen(255, random.randint(0, 165), 0)  # Orange color
+                    # Create intense ship explosion with multiple colors and sizes
+                    for _ in range(300):  # Even more particles
+                        vx = random.uniform(-10, 10)  # Faster spread
+                        vy = random.uniform(-10, 10)
+                        size = random.randint(8, 12)  # Larger particles
+                        lifetime = random.randint(90, 120)  # Longer duration
+                        # Use a mix of bright colors
+                        color = random.choice([
+                            display.create_pen(255, 255, 0),   # Yellow
+                            display.create_pen(255, 165, 0),  # Orange
+                            display.create_pen(255, 0, 0),    # Red
+                            display.create_pen(255, 255, 255) # White
+                        ])
                         ship_explosion_particles.append([ship_x, ship_y, 1.0, size, color, lifetime, vx, vy])
-                    
-                    # Create explosion particles for the building
-                    for _ in range(50):
-                        vx = random.uniform(-2, 2)
-                        vy = random.uniform(-2, 2)
-                        size = random.randint(5, 10)  # Increased initial size
-                        lifetime = random.randint(30, 60)  # Increased lifetime
-                        color = display.create_pen(random.randint(100, 255), random.randint(0, 100), 0)  # Varies from dark to light green
+
+                    # Create massive building explosion with fire effect
+                    for _ in range(300):  # Huge number of particles
+                        vx = random.uniform(-8, 8)
+                        vy = random.uniform(-8, 8)
+                        size = random.randint(15, 25)  # Very large particles
+                        lifetime = random.randint(90, 120)
+                        # Create fire effect with color gradient
+                        color = random.choice([
+                            display.create_pen(255, 255, 0),   # Yellow
+                            display.create_pen(255, 140, 0),  # Orange
+                            display.create_pen(255, 69, 0),   # Red-Orange
+                            display.create_pen(255, 0, 0),    # Red
+                            display.create_pen(128, 0, 0)     # Dark Red
+                        ])
                         explosions.append([building["x"], building["y"], building["z"], size, color, lifetime, vx, vy])
 
 def update_ship_explosion_particles():
