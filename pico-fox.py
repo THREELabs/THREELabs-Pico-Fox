@@ -372,33 +372,35 @@ def update_projectiles():
                         if obstacle['health'] <= 0:
                             obstacles.remove(obstacle)
                             # Create bigger, more dramatic boss explosion
-                            for _ in range(50):  # Reduced particle count
-                                vx = random.uniform(-2, 2)  # Slower spread
-                                vy = random.uniform(-2, 2)
+                            for _ in range(150):  # Increased particle count
+                                vx = random.uniform(-4, 4)  # Faster spread
+                                vy = random.uniform(-4, 4)
                                 color = display.create_pen(255, 140, 0)  # Single orange color
                                 explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 10, color, 20, vx, vy])
                             score += 100  # Increase score for defeating boss
                     else:
                         obstacles.remove(obstacle)
                         # Create more dramatic regular explosion
-                        for _ in range(15):  # Reduced particle count
-                            vx = random.uniform(-1.5, 1.5)  # Slower spread
-                            vy = random.uniform(-1.5, 1.5)
+                        for _ in range(50):  # Increased particle count
+                            vx = random.uniform(-3, 3)  # Slower spread
+                            vy = random.uniform(-3, 3)
                             color = display.create_pen(255, 69, 0)  # Single red-orange color
-                            explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 6, color, 15, vx, vy])
+                            fragment_width = 3
+                            fragment_height = 2
+                            explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 6, color, 15, vx, vy, fragment_width, fragment_height])
                         score += 10
                     projectiles.remove(projectile)
                     break
 
 def draw_explosions():
-    """Draw explosion particles."""
+    """Draw explosion particles as smaller pieces."""
     for particle in explosions:
-        x, y, z, size, color, lifetime, vx, vy = particle
+        x, y, z, size, color, lifetime, vx, vy, fragment_width, fragment_height = particle
         # Project 3D coordinates to 2D screen coordinates
         screen_x, screen_y = project_3d_to_2d(x - WIDTH // 2, y, z)
-        # Draw the particle as a circle with varying size
+        # Draw smaller fragments for explosion effect
         display.set_pen(color)
-        display.circle(int(screen_x), int(screen_y), int(size))
+        display.rectangle(int(screen_x + vx - fragment_width / 2), int(screen_y + vy - fragment_height / 2), int(fragment_width), int(fragment_height))
 
 def update_explosions():
     """Update explosion particles with culling and optimization."""
@@ -413,17 +415,17 @@ def update_explosions():
         
         # Reduce alpha value (fading effect)
         alpha = color.r
-        if alpha > 10:
-            alpha -= 10
+        if alpha > 5:  # Reduced alpha decrement speed
+            alpha -= 5
             color = display.create_pen(alpha, color.g, color.b)
         else:
             color = display.create_pen(0, color.g, color.b)
         
         # Update particle position and properties
-        x += int(vx)
-        y += int(vy)
-        size = max(0, size - 0.2)  # Faster size reduction
-        lifetime -= 2  # Faster expiration
+        x += int(vx) * 2
+        y += int(vy) * 2
+        size = max(0, size - 0.05)  # Even slower size reduction
+        lifetime -= 0.5  # Even slower expiration
         
         # Add the particle to the new list if it has not expired
         if lifetime > 0 and size > 0:
@@ -469,13 +471,16 @@ def check_collision():
                         screen_y_top < ship_y < screen_y_base):
                     game_over = True
                     # Create optimized ship explosion
-                    for _ in range(200):  # Increased particle count
-                        vx = random.uniform(-6, 6)  # Faster spread
-                        vy = random.uniform(-6, 6)
-                        size = random.randint(2, 6)  # Vary particle size
-                        lifetime = random.randint(20, 50)  # Shorter duration
-                        color = random.choice([display.create_pen(255, 140, 0), display.create_pen(255, 255, 0)])  # Vary color
-                        ship_explosion_particles.append([ship_x, ship_y, 1.0, size, color, lifetime, vx, vy])
+                    for _ in range(300):  # Increased particle count for larger explosion
+                        vx = random.uniform(-8, 8)  # Faster spread for larger explosion
+                        vy = random.uniform(-8, 8)
+                        size = random.randint(4, 12)  # Increased particle size for larger explosion
+                        lifetime = random.randint(30, 70)  # Longer lifetime for fizzling effect
+                        color = display.create_pen(255, 255, 0)  # Yellow color for explosion
+                        angle = random.uniform(0, 2 * math.pi)
+                        fragment_width = size * math.cos(angle)
+                        fragment_height = size * math.sin(angle)
+                        ship_explosion_particles.append([ship_x, ship_y, 1.0, size, color, lifetime, vx, vy, fragment_width, fragment_height])
 
                     # Create optimized building explosion
                     for _ in range(200):  # Increased particle count
@@ -484,7 +489,10 @@ def check_collision():
                         size = random.randint(4, 10)  # Vary particle size
                         lifetime = random.randint(20, 50)
                         color = random.choice([display.create_pen(255, 69, 0), display.create_pen(255, 165, 0)])  # Vary color
-                        explosions.append([building["x"], building["y"], building["z"], size, color, lifetime, vx, vy])
+                        angle = random.uniform(0, 2 * math.pi)
+                        fragment_width = size * math.cos(angle)
+                        fragment_height = size * math.sin(angle)
+                        explosions.append([ship_x, ship_y, building["z"], size, color, lifetime, vx, vy, fragment_width, fragment_height])
 
 def update_ship_explosion_particles():
     """Update ship explosion particles with culling."""
@@ -492,11 +500,11 @@ def update_ship_explosion_particles():
     new_particles = []
     for particle in ship_explosion_particles:
         x, y, z, size, color, lifetime, vx, vy = particle
-        
+
         # Cull particles that are off-screen
         if x < 0 or x > WIDTH or y < 0 or y > HEIGHT:
             continue
-        
+
         # Reduce alpha value (fading effect)
         alpha = color.r
         if alpha > 10:
@@ -504,27 +512,31 @@ def update_ship_explosion_particles():
             color = display.create_pen(alpha, color.g, color.b)
         else:
             color = display.create_pen(0, color.g, color.b)
-            
+
         # Update particle position and properties
-        x += vx
-        y += vy
-        size = max(0, size - 0.1)  # Faster size reduction
-        lifetime -= 2  # Faster expiration
-        
+        x += vx * 2  # Increased velocity
+        y += vy * 2  # Increased velocity
+        size = max(0, size - 0.2)  # Faster size reduction
+        lifetime -= 1  # Faster expiration
+
         # Add the particle to the new list if it has not expired
         if lifetime > 0 and size > 0:
-            new_particles.append([x, y, z, size, color, lifetime, vx, vy])
+            # Rotate the fragment
+            angle = random.uniform(0, 2 * math.pi)
+            fragment_width = size * math.cos(angle)
+            fragment_height = size * math.sin(angle)
+            new_particles.append([x, y, z, size, color, lifetime, vx, vy, fragment_width, fragment_height])
     ship_explosion_particles = new_particles
 
 def draw_ship_explosion():
     """Draw ship explosion particles."""
     for particle in ship_explosion_particles:
-        x, y, z, size, color, lifetime, vx, vy = particle
+        x, y, z, size, color, lifetime, vx, vy, fragment_width, fragment_height = particle
         # Project 3D coordinates to 2D screen coordinates
         screen_x, screen_y = project_3d_to_2d(x - WIDTH // 2, y, z)
-        # Draw the particle
+        # Draw the fragment
         display.set_pen(color)
-        display.circle(int(screen_x), int(screen_y), int(size))
+        display.rectangle(int(screen_x - fragment_width / 2), int(screen_y - fragment_height / 2), int(fragment_width), int(fragment_height))
 
 def draw_game_over():
     display.set_pen(WHITE)
