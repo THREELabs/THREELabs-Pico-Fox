@@ -372,20 +372,20 @@ def update_projectiles():
                         if obstacle['health'] <= 0:
                             obstacles.remove(obstacle)
                             # Create bigger, more dramatic boss explosion
-                            for _ in range(100):  # More particles
-                                vx = random.uniform(-3, 3)  # Faster particle speed
-                                vy = random.uniform(-3, 3)
-                                color = random.choice([YELLOW, ORANGE, RED])  # Multiple colors
-                                explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 15, color, 30, vx, vy])
+                            for _ in range(50):  # Reduced particle count
+                                vx = random.uniform(-2, 2)  # Slower spread
+                                vy = random.uniform(-2, 2)
+                                color = display.create_pen(255, 140, 0)  # Single orange color
+                                explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 10, color, 20, vx, vy])
                             score += 100  # Increase score for defeating boss
                     else:
                         obstacles.remove(obstacle)
                         # Create more dramatic regular explosion
-                        for _ in range(20):  # More particles
-                            vx = random.uniform(-2, 2)  # Faster particle speed
-                            vy = random.uniform(-2, 2)
-                            color = random.choice([ORANGE, RED])  # Multiple colors
-                            explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 8, color, 15, vx, vy])
+                        for _ in range(15):  # Reduced particle count
+                            vx = random.uniform(-1.5, 1.5)  # Slower spread
+                            vy = random.uniform(-1.5, 1.5)
+                            color = display.create_pen(255, 69, 0)  # Single red-orange color
+                            explosions.append([obstacle['x'], obstacle['y'], obstacle['z'], 6, color, 15, vx, vy])
                         score += 10
                     projectiles.remove(projectile)
                     break
@@ -401,19 +401,22 @@ def draw_explosions():
         display.circle(int(screen_x), int(screen_y), int(size))
 
 def update_explosions():
-    """Update explosion particles."""
+    """Update explosion particles with culling and optimization."""
     global explosions
     new_explosions = []
     for particle in explosions:
         x, y, z, size, color, lifetime, vx, vy = particle
-        # Update particle position based on velocity with integer steps
+        
+        # Cull particles that are off-screen
+        if x < 0 or x > WIDTH or y < 0 or y > HEIGHT:
+            continue
+            
+        # Update particle position and properties
         x += int(vx)
         y += int(vy)
-        size = max(0, size - 0.1)  # Decrease size over time
-        lifetime -= 1
-        # Add some randomness to the movement
-        x += random.randint(-1, 1)
-        y += random.randint(-1, 1)
+        size = max(0, size - 0.2)  # Faster size reduction
+        lifetime -= 2  # Faster expiration
+        
         # Add the particle to the new list if it has not expired
         if lifetime > 0 and size > 0:
             new_explosions.append([x, y, z, size, color, lifetime, vx, vy])
@@ -457,48 +460,43 @@ def check_collision():
                 if (screen_x_base - width // 2 < ship_x < screen_x_base + width // 2 and
                         screen_y_top < ship_y < screen_y_base):
                     game_over = True
-                    # Create intense ship explosion with multiple colors and sizes
-                    for _ in range(300):  # Even more particles
-                        vx = random.uniform(-10, 10)  # Faster spread
-                        vy = random.uniform(-10, 10)
-                        size = random.randint(8, 12)  # Larger particles
-                        lifetime = random.randint(90, 120)  # Longer duration
-                        # Use a mix of bright colors
-                        color = random.choice([
-                            display.create_pen(255, 255, 0),   # Yellow
-                            display.create_pen(255, 165, 0),  # Orange
-                            display.create_pen(255, 0, 0),    # Red
-                            display.create_pen(255, 255, 255) # White
-                        ])
+                    # Create optimized ship explosion
+                    for _ in range(100):  # Reduced particle count
+                        vx = random.uniform(-5, 5)  # Slower spread
+                        vy = random.uniform(-5, 5)
+                        size = random.randint(4, 8)  # Smaller particles
+                        lifetime = random.randint(30, 60)  # Shorter duration
+                        # Use pre-defined color
+                        color = display.create_pen(255, 140, 0)  # Orange
                         ship_explosion_particles.append([ship_x, ship_y, 1.0, size, color, lifetime, vx, vy])
 
-                    # Create massive building explosion with fire effect
-                    for _ in range(300):  # Huge number of particles
-                        vx = random.uniform(-8, 8)
-                        vy = random.uniform(-8, 8)
-                        size = random.randint(15, 25)  # Very large particles
-                        lifetime = random.randint(90, 120)
-                        # Create fire effect with color gradient
-                        color = random.choice([
-                            display.create_pen(255, 255, 0),   # Yellow
-                            display.create_pen(255, 140, 0),  # Orange
-                            display.create_pen(255, 69, 0),   # Red-Orange
-                            display.create_pen(255, 0, 0),    # Red
-                            display.create_pen(128, 0, 0)     # Dark Red
-                        ])
+                    # Create optimized building explosion
+                    for _ in range(100):  # Reduced particle count
+                        vx = random.uniform(-4, 4)
+                        vy = random.uniform(-4, 4)
+                        size = random.randint(8, 12)  # Smaller particles
+                        lifetime = random.randint(30, 60)
+                        # Use single color
+                        color = display.create_pen(255, 69, 0)  # Red-Orange
                         explosions.append([building["x"], building["y"], building["z"], size, color, lifetime, vx, vy])
 
 def update_ship_explosion_particles():
-    """Update ship explosion particles."""
+    """Update ship explosion particles with culling."""
     global ship_explosion_particles
     new_particles = []
     for particle in ship_explosion_particles:
         x, y, z, size, color, lifetime, vx, vy = particle
-        # Update particle position based on velocity
+        
+        # Cull particles that are off-screen
+        if x < 0 or x > WIDTH or y < 0 or y > HEIGHT:
+            continue
+            
+        # Update particle position and properties
         x += vx
         y += vy
-        size = max(0, size - 0.05)  # Decrease size over time
-        lifetime -= 1
+        size = max(0, size - 0.1)  # Faster size reduction
+        lifetime -= 2  # Faster expiration
+        
         # Add the particle to the new list if it has not expired
         if lifetime > 0 and size > 0:
             new_particles.append([x, y, z, size, color, lifetime, vx, vy])
