@@ -35,6 +35,12 @@ SIDE_GRAY = display.create_pen(100, 100, 100)  # Gray for the sides of the build
 SKY_BLUE = (135, 206, 235)  # Light blue for the sky (RGB tuple)
 HORIZON_BLUE = (0, 191, 255)  # Darker blue for the horizon (RGB tuple)
 
+# UFO variables
+ufos = []
+ufo_spawn_timer = 0
+ufo_spawn_interval = 1000 # milliseconds
+ufo_speed = 0.5
+
 # Game variables
 ship_x = WIDTH // 2
 ship_y = HEIGHT // 2
@@ -98,7 +104,7 @@ def project_3d_to_2d(x, y, z):
     return screen_x, screen_y
 
 def draw_sky_and_horizon():
-    """Draw a gradient sky and horizon."""
+    """Draw a gradient sky and horizon without clouds."""
     for y in range(HEIGHT - GROUND_HEIGHT):  # Stop before the ground
         # Interpolate between SKY_BLUE and HORIZON_BLUE based on the y position
         ratio = y / (HEIGHT - GROUND_HEIGHT)
@@ -107,18 +113,31 @@ def draw_sky_and_horizon():
         b = int(SKY_BLUE[2] * (1 - ratio) + HORIZON_BLUE[2] * ratio)
         color = display.create_pen(r, g, b)
         display.set_pen(color)
-        display.line(0, y, WIDTH, y)
+        display.rectangle(0, 0, WIDTH, HEIGHT - GROUND_HEIGHT)
+
+def draw_ufo(x, y, size):
+    """Draw a UFO spaceship using circles to simulate ellipse."""
+    display.set_pen(CYAN)
+    # Main body (simulating ellipse with circles)
+    display.circle(x, y, size) # Main body as circle
+    display.circle(x, y - size // 4, size // 2) # Top dome as smaller circle
+    # Bottom lights
+    light_radius = size // 8
+    display.set_pen(YELLOW)
+    display.circle(x - size // 3, y + size // 4, light_radius)
+    display.circle(x, y + size // 4, light_radius)
+    display.circle(x + size // 3, y + size // 4, light_radius)
 
 def draw_ground():
     """Draw the ground (grass) at the bottom of the screen with fine animated speckles."""
     # Base grass color
     display.set_pen(GREEN)
     display.rectangle(0, HEIGHT - GROUND_HEIGHT, WIDTH, GROUND_HEIGHT)
-    
+
     # Create more contrasting darker and lighter green colors for speckles
     dark_green = display.create_pen(0, 180, 0)  # Darker green for better visibility
     light_green = display.create_pen(20, 220, 20)  # Less bright light green
-    
+
     # Add more numerous, finer speckles for subtle movement effect
     for _ in range(100):  # Increased number of speckles
         x = random.randint(0, WIDTH)
@@ -126,9 +145,6 @@ def draw_ground():
         # Always use size 1 for finer detail
         display.set_pen(dark_green if random.random() < 0.5 else light_green)
         display.circle(x, y, 1)
-
-def draw_city_background():
-    """Draw the city background with moving buildings."""
 
 def draw_city_background():
     """Draw the city background with moving buildings."""
@@ -544,7 +560,7 @@ def draw_game_over():
     display.text("Press A to restart", WIDTH // 2 - 70, HEIGHT // 2 + 20, scale=1)
 
 def game_loop():
-    global ship_x, ship_y, game_over, ship_speed, max_speed
+    global ship_x, ship_y, game_over, ship_speed, max_speed, ufo_spawn_timer, ufos
     
     while True:
         # Draw sky and horizon
@@ -553,6 +569,24 @@ def game_loop():
         # Draw ground
         draw_ground()
         
+        # UFO Spawning and movement
+        ufo_spawn_timer += utime.ticks_ms()
+        if ufo_spawn_timer >= ufo_spawn_interval:
+            ufo_spawn_timer -= ufo_spawn_interval
+            if len(ufos) < 2: # Limit to 2 UFOs
+                # Spawn UFO at random x, near top of screen, and far z
+                ufo_x = random.randint(0, WIDTH)
+                ufo_y = random.randint(20, HEIGHT // 4) # Spawn near top
+                ufo_z = random.uniform(15.0, 25.0) # Farther Z for distance
+                ufos.append({'x': ufo_x, 'y': ufo_y, 'z': ufo_z, 'size': random.randint(10, 20)})
+
+        for ufo in ufos:
+            ufo['z'] -= ufo_speed  # Move UFOs closer
+
+        # Remove ufos that are too close
+        ufos = [ufo for ufo in ufos if ufo['z'] > 1]
+
+
         if not game_over:
             # Increase ship speed over time
             if ship_speed < max_speed:
@@ -584,6 +618,12 @@ def game_loop():
         
         # Draw city background
         draw_city_background()
+        
+        # Draw UFOs before ship and explosions
+        for ufo in ufos:
+            screen_x, screen_y = project_3d_to_2d(ufo['x'] - WIDTH // 2, ufo['y'], ufo['z'])
+            ufo_size = int(ufo['size'] / ufo['z'] * focal_length)
+            draw_ufo(screen_x, screen_y, ufo_size)
         
         # Draw elements
         if not game_over:
