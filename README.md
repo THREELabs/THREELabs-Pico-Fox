@@ -1,27 +1,30 @@
-# Pico Fox
+# StarFox Pico
 
-Pico Fox: A compact, fan-made homage to the classic SNES game StarFox, built for the Raspberry Pi Pico using the Pimoroni Pico Display Pack. This project brings retro space shooter action to the micro-controller, featuring simplified graphics and gameplay optimized for the Pico's hardware.
+A compact, fan-made homage to the classic SNES game *StarFox*, built for the **Raspberry Pi Pico** using the **Pimoroni Pico Display Pack**. This project brings the iconic rail-shooter experience to the tiny but powerful Pico, featuring 3D graphics, dynamic cityscapes, and intense aerial combat.
+
+
+
+---
 
 ## Features
+- **3D Perspective Graphics**: Experience a retro-style 3D world with a dynamic cityscape and horizon.
+- **Smooth Controls**: Tilt and maneuver your ship with responsive button inputs.
+- **Smoke Trails & Explosions**: Immersive particle effects for smoke trails and explosive collisions.
+- **Dynamic Obstacles**: Dodge and shoot down enemy ships and boss monsters.
+- **Power-Ups**: Collect power-ups to gain special abilities.
+- **Optimized Performance**: Designed to run smoothly on the Raspberry Pi Pico's hardware.
 
-- **3D Starfield Background**: Experience a realistic starfield with depth perception.
-- **Ship Controls**: Maneuver your ship left and right to avoid obstacles.
-- **Shooting Mechanics**: Fire projectiles at obstacles to score points.
-- **Power-Ups**: Activate a special weapon to clear multiple obstacles at once.
-- **Dynamic Obstacles**: Obstacles move towards you, increasing difficulty over time.
-- **Explosions and Effects**: Watch obstacles explode in a burst of color.
+---
 
-## Installation
+## How to Play
+- **A Button**: Move up.
+- **X Button**: Move down.
+- **B Button**: Tilt left.
+- **Y Button**: Tilt right.
 
-### Hardware Requirements
+---
 
+## Requirements
 - Raspberry Pi Pico
-- Pimoroni Pico Display
-- Buttons connected to GPIO pins 12, 13, 14, and 15 (A, B, X, Y)
-- Necessary cables and power supply
-
-### Software Requirements
-
-- MicroPython installed on the Raspberry Pi Pico
-- Pimoroni libraries for Pico Display and buttons
-
+- Pimoroni Pico Display Pack
+- MicroPython
