@@ -393,21 +393,22 @@ def update_projectiles():
                     break
 
 def draw_explosions():
-    """Draw explosion particles as smaller pieces."""
+    """Draw explosion particles as circles with varying sizes and colors."""
     for particle in explosions:
-        x, y, z, size, color, lifetime, vx, vy, fragment_width, fragment_height = particle
+        x, y, z, size, color, lifetime, vx, vy, _, _ = particle  # Ignore fragment_width and fragment_height
         # Project 3D coordinates to 2D screen coordinates
         screen_x, screen_y = project_3d_to_2d(x - WIDTH // 2, y, z)
-        # Draw smaller fragments for explosion effect
+        # Draw circles with some randomness in size
         display.set_pen(color)
-        display.rectangle(int(screen_x + vx - fragment_width / 2), int(screen_y + vy - fragment_height / 2), int(fragment_width), int(fragment_height))
+        radius = random.randint(1, int(size))
+        display.circle(int(screen_x + vx), int(screen_y + vy), radius)
 
 def update_explosions():
     """Update explosion particles with culling and optimization."""
     global explosions
     new_explosions = []
     for particle in explosions:
-        x, y, z, size, color, lifetime, vx, vy = particle
+        x, y, z, size, color, lifetime, vx, vy, fragment_width, fragment_height = particle
         
         # Cull particles that are off-screen
         if x < 0 or x > WIDTH or y < 0 or y > HEIGHT:
@@ -415,21 +416,25 @@ def update_explosions():
         
         # Reduce alpha value (fading effect)
         alpha = color.r
-        if alpha > 5:  # Reduced alpha decrement speed
+        if alpha > 5:
             alpha -= 5
-            color = display.create_pen(alpha, color.g, color.b)
+            # Introduce some color variation
+            if random.random() < 0.5:
+                color = display.create_pen(alpha, max(0, color.g - 10), color.b)
+            else:
+                color = display.create_pen(alpha, color.g, min(255, color.b + 10))
         else:
             color = display.create_pen(0, color.g, color.b)
         
         # Update particle position and properties
         x += int(vx) * 2
         y += int(vy) * 2
-        size = max(0, size - 0.05)  # Even slower size reduction
-        lifetime -= 0.5  # Even slower expiration
+        size = max(0, size - 0.05)
+        lifetime -= 0.5
         
         # Add the particle to the new list if it has not expired
         if lifetime > 0 and size > 0:
-            new_explosions.append([x, y, z, size, color, lifetime, vx, vy])
+            new_explosions.append([x, y, z, size, color, lifetime, vx, vy, fragment_width, fragment_height])
     explosions = new_explosions
 
 def update_power_ups():
