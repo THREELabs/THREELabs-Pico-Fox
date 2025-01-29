@@ -41,8 +41,8 @@ ship_y = HEIGHT // 2
 ship_speed = 12  # Increased forward speed
 up_down_speed = 6  # Slower up/down speed
 left_right_speed = 6  # Slower left/right speed
-speed_increment = 14  # Amount to increase speed each frame
-max_speed = 30  # Maximum speed
+speed_increment = 40  # Amount to increase speed each frame
+max_speed = 100  # Maximum speed
 ship_rotation = 0  # Track ship rotation angle
 smoke_particles = []  # List to store smoke trail particles
 explosions = []  # List to store explosion particles
@@ -611,4 +611,3 @@ def game_loop():
 # Start the game
 reset_game()
 game_loop()
-
